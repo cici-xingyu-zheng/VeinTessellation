@@ -29,23 +29,6 @@ def quick_plot(G, deposit_folder):
 
     return
 
-def make_dual(G, centroid_in_faces, point_in_faces, result_mat):
-    G_dual = nx.Graph()
-    for i in range(len(centroid_in_faces)):
-        node1 = G.graph['dots_passed'][i]
-        G_dual.add_node(node1)
-        G_dual.nodes[node1]['label'] = i
-        G_dual.nodes[node1]['centroid'] = centroid_in_faces[i]
-        G_dual.nodes[node1]['random'] = point_in_faces[i]
-
-        for j in range(i+1, (len(centroid_in_faces))):
-            if result_mat[i][j]:
-                node2 = G.graph['dots_passed'][j]
-                G_dual.add_edge(node1, node2)
-                G_dual.edges[node1, node2]['angle'] = result_mat[i][j][0] 
-                G_dual.edges[node1, node2]['dist'] = result_mat[i][j][1] 
-    
-    return G_dual
 
 def plot_baseline(G, G_dual, deposit_folder, pt_type = 'centroid'):
     '''
@@ -63,7 +46,7 @@ def plot_baseline(G, G_dual, deposit_folder, pt_type = 'centroid'):
         compared_position_dual[node] = (G_dual.nodes[node][pt_type][0], G_dual.nodes[node][pt_type][1])
         node_position_dual[node] = node
      
-    color_dict = {'centroid': 'purple', 'random':'red'}  
+    color_dict = {'centroid': 'purple', 'midpoint': 'deeppink','random':'red'}  
     
     fig, ax = plt.subplots(figsize=(9,9/G.graph['ratio']))
     
@@ -167,7 +150,7 @@ def plot_random_rounds(mean_angle_error, mean_dist_error, rst_summary, deposit_f
 def plot_dist(df, deposit_folder, test = 'angle'):
 
     fig, ax = plt.subplots(nrows =2, figsize = (8, 12))
-    sns.histplot(df, x = 'angle_diff', hue = 'type', kde = True, ax = ax[0])
+    sns.histplot(df, x = f'{test}_diff', hue = 'type', kde = True, ax = ax[0])
     ax[1] = sns.violinplot(x = f'{test}_diff', y = 'type' , 
                             data = df, inner = 'quartile')
     for l in ax[1].lines:
@@ -212,7 +195,7 @@ def plot_voronoi(G, vor, deposit_folder):
 
 def plot_vor_regions(G, seeds, single_dot, bounded_regions, deposit_folder, dot_type = 'dots'):
     
-    dot_color = {'dots':'C1', 'centroid':'purple', 'random':'red'}
+    dot_color = {'dots':'C1', 'centroid':'purple', 'midpoint': 'hotpink', 'random':'red'}
 
     fig, ax = plt.subplots(figsize = (8, 8/G.graph['ratio']))
 
@@ -239,3 +222,64 @@ def plot_vor_regions(G, seeds, single_dot, bounded_regions, deposit_folder, dot_
     fig.savefig(f'{deposit_folder}/voronoi_regions_by_{dot_type}.pdf')
 
     return
+
+
+def plot_subdual(G, G_dual, deposit_folder, sample, attr = "angle"):
+
+    node_position_G = {}
+        
+    node_position_dual = {}
+    compared_position_dual = {}
+
+    edge_color_dual = []
+    edge_color_comp_dual = []
+
+    for node in G.nodes:
+        node_position_G[node] = node
+
+    edge_style = ['solid' if G.edges[e]['shared'] =='tested_shared' else 'dashed' for e in G.edges]
+    edge_col = ['black' if G.edges[e]['shared'] =='tested_shared' else 'C7' for e in G.edges]
+
+    for node in G_dual.nodes:
+        node_position_dual[node] = node
+        compared_position_dual[node] = (G_dual.nodes[node]['centroid'][0], G_dual.nodes[node]['centroid'][1])
+
+        
+    for edge in G_dual.edges:
+        edge_color_dual.append(G_dual.edges[edge][attr])
+        edge_color_comp_dual.append(G_dual.edges[edge][f'centroid_{attr}'])
+    selected_nodes = [n for n,v in G.nodes(data=True) if v['type'] == 'vein']  
+
+    cmap_dict = {"angle":plt.cm.viridis, "dist":plt.cm.magma}
+
+    fig, ax = plt.subplots(figsize=(10,10/G.graph['ratio']))
+
+    for i in range(len(G.graph['faces_passed'])):
+        p = mpl.patches.Polygon(G.graph['faces_passed'][i], facecolor = 'C7', alpha = .1)
+        ax.add_patch(p)
+
+    nx.draw_networkx_edges(G, pos=node_position_G, edge_color = edge_col, style = edge_style, ax = ax) 
+    nx.draw_networkx_nodes(G, pos=node_position_G, 
+                            nodelist = selected_nodes, node_size= 5, node_color = 'C7', ax = ax) 
+    nx.draw(G_dual, pos=node_position_dual, node_size= 20,  node_color= 'C1', 
+            edge_color = edge_color_dual ,  edge_cmap =  cmap_dict[attr], width = 2, alpha = .9,
+                ax = ax)
+    
+    nx.draw(G_dual, pos=compared_position_dual, node_size= 20,  node_color= 'purple', 
+            edge_color = edge_color_comp_dual ,  edge_cmap =  cmap_dict[attr], width = 2, alpha = .9,
+                ax = ax)
+
+
+    # add colorbar:
+    cbar_ax = fig.add_axes([0.2, .1, .6, 0.02])
+
+    cb = mpl.colorbar.ColorbarBase(cbar_ax, orientation='horizontal', 
+                                    cmap= cmap_dict[attr],
+                                    norm=mpl.colors.Normalize(np.array(edge_color_dual).min(), 
+                                                                np.array(edge_color_dual).max()),
+                                    label=f'{attr} difference to ideal')
+
+    ax.set_title(f'{attr} 10 bad apples', fontsize = 16)
+    
+    fig.savefig(f'{deposit_folder}/{sample}_{attr}_bad_apples.pdf')
+    plt.show()   

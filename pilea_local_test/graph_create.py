@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 import cv2
 import networkx as nx
@@ -141,8 +142,8 @@ def get_faces(G, G_eb, bound = 15):
 
         # if len(new_face) > bound and len(new_face) > len(G.graph['boundary']):
         # ATTENTION NEEDED: the boundary face sometimes can  be confused for cases when the interior faces does not connect to the exterior.
-        
-        if len(new_face) > bound and len(new_face):
+        # Solution for now is to raise the threshold for boundary: 
+        if len(new_face) > bound + 15:
             G.graph['boundary'] = new_face
             
         # duplicate check: 
@@ -268,4 +269,37 @@ def graph_creation(sample):
 
     return G
 
+# duals for now can only be created after the local test ---------
 
+def make_dual(G, cent_in_faces, mid_in_faces, rand_in_faces, result_mat):
+    G_dual = nx.Graph()
+    for i in range(len(cent_in_faces)):
+        node1 = G.graph['dots_passed'][i]
+        G_dual.add_node(node1)
+        G_dual.nodes[node1]['label'] = i
+        G_dual.nodes[node1]['centroid'] = cent_in_faces[i]
+        G_dual.nodes[node1]['midpoint'] = mid_in_faces[i]
+        G_dual.nodes[node1]['random'] = rand_in_faces[i]
+
+        for j in range(i+1, (len(cent_in_faces))):
+            if result_mat[i][j]:
+                node2 = G.graph['dots_passed'][j]
+                G_dual.add_edge(node1, node2)
+                G_dual.edges[node1, node2]['angle'] = result_mat[i][j][0] 
+                G_dual.edges[node1, node2]['dist'] = result_mat[i][j][1] 
+                
+    return G_dual
+
+
+def create_dual_subgraph(G_dual, rst_df, cent_df, dual_edge_list, attr = 'angle'):
+    comp_df = pd.concat([rst_df[f'{attr}_diff'], cent_df[f'{attr}_diff']], axis=1)
+    comp_df.columns = ['dot', 'centroid']
+    comp_df['worse_by'] = comp_df['dot'] - comp_df['centroid']
+    worse_10 = comp_df.sort_values(by=['worse_by'], ascending = False).index.tolist()[0:10]
+    bad_apples = [dual_edge_list[i] for i in worse_10]
+    G_dual_bad_apples =  G_dual.edge_subgraph(bad_apples)
+
+    for (i, e) in enumerate(bad_apples):
+        G_dual_bad_apples.edges[e][f'centroid_{attr}'] = comp_df['centroid'][worse_10[i]]
+    
+    return G_dual_bad_apples

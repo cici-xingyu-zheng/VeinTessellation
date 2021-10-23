@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import math
-
+import random
 from matplotlib.path import Path
-
+from shapely.geometry import Point, Polygon 
 
 # ---- angle and distance error calculate suite ----
 
@@ -190,6 +190,39 @@ def randlist_n_centroid(G):
     print('Binning completed.')
     print()
     return points_in_faces, centroid_in_faces
+
+def random_n_centroid(G):
+    '''
+    this is the alternative function producing same result as randlist_n_centroid; when we don't want to do the boot strap.
+    returns rand_in_faces, mid_in_faces, cent_in_faces
+    '''
+    L = len(G.graph['faces_passed'])
+    cent_in_faces = np.ndarray((L,), dtype = 'object')
+    mid_in_faces = np.ndarray((L,), dtype = 'object')
+    rand_in_faces = np.ndarray((L,), dtype = 'object')
+
+
+    for i in range(L):
+        poly = Polygon(G.graph['faces_passed'][i])
+        cent_in_faces[i] = list(poly.centroid.coords)[0]
+        mid_in_faces[i] = list(poly.representative_point().coords)[0]
+        rand_in_faces[i] = list(get_random_point_in(poly).coords)[0]
+    
+    return cent_in_faces, mid_in_faces, rand_in_faces
+
+
+def get_random_point_in(poly):
+
+    'helper func for random_n_centroid()'
+
+    min_x, min_y, max_x, max_y = poly.bounds
+    while True:
+        p = Point(random.uniform(min_x, max_x), random.uniform(min_y, max_y))
+        if poly.contains(p):
+            return p # Point object
+
+
+
 
 
 # ---- local test main -----------------------------
