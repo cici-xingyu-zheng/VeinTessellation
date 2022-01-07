@@ -46,7 +46,7 @@ def plot_baseline(G, G_dual, deposit_folder, pt_type = 'centroid'):
         compared_position_dual[node] = (G_dual.nodes[node][pt_type][0], G_dual.nodes[node][pt_type][1])
         node_position_dual[node] = node
      
-    color_dict = {'centroid': 'purple', 'midpoint': 'deeppink','random':'red'}  
+    color_dict = {'centroid': 'red', 'midpoint': 'deeppink','random':'purple'}  
     
     fig, ax = plt.subplots(figsize=(9,9/G.graph['ratio']))
     
@@ -195,7 +195,7 @@ def plot_voronoi(G, vor, deposit_folder):
 
 def plot_vor_regions(G, seeds, single_dot, bounded_regions, deposit_folder, dot_type = 'dots'):
     
-    dot_color = {'dots':'C1', 'centroid':'purple', 'midpoint': 'hotpink', 'random':'red'}
+    dot_color = {'dots':'C1', 'centroid':'red', 'midpoint': 'hotpink', 'random':'purple'}
 
     fig, ax = plt.subplots(figsize = (8, 8/G.graph['ratio']))
 
