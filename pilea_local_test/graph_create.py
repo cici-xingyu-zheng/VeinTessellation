@@ -269,9 +269,14 @@ def graph_creation(sample):
 
     return G
 
-# duals for now can only be created after the local test ---------
+
+# Okay the dual can only be created after running the tests in voronoi_local.py!!!
 
 def make_dual(G, cent_in_faces, mid_in_faces, rand_in_faces, result_mat):
+    '''
+    This is used to create the dual graph by itself and add the referene point test results in,
+    thus needs the local test results.
+    '''
     G_dual = nx.Graph()
     for i in range(len(cent_in_faces)):
         node1 = G.graph['dots_passed'][i]
@@ -292,6 +297,10 @@ def make_dual(G, cent_in_faces, mid_in_faces, rand_in_faces, result_mat):
 
 
 def create_dual_subgraph(G_dual, rst_df, cent_df, dual_edge_list, attr = 'angle'):
+    '''
+    Select the worst 10 performing pairs.
+    Return the dual subgraph of those 10 edges.
+    '''
     comp_df = pd.concat([rst_df[f'{attr}_diff'], cent_df[f'{attr}_diff']], axis=1)
     comp_df.columns = ['dot', 'centroid']
     comp_df['worse_by'] = comp_df['dot'] - comp_df['centroid']
